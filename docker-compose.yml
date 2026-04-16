@@ -1,21 +1,21 @@
 services:
   tradingmonitor:
     image: guilsmatos/tradingmonitor:latest
+    container_name: tradingmonitor
     restart: unless-stopped
-    depends_on:
-      timescaledb:
-        condition: service_healthy
+    networks:
+      - datamanager_default
     ports:
       - "${DASHBOARD_PORT:-8000}:8000"
       - "${SERVER_PORT:-5555}:5555"
     environment:
-      DATABASE_URL: postgresql://postgres:${POSTGRES_PASSWORD:-changeme}@timescaledb:5432/tradingmonitor
+      DATABASE_URL: postgresql://${POSTGRES_USER:-datamanager}:${POSTGRES_PASSWORD:-changeme}@datamanager-timescaledb:5432/tradingmonitor
       API_KEY: ${API_KEY:-changeme}
       DASHBOARD_HOST: "0.0.0.0"
       DASHBOARD_PORT: "8000"
       SERVER_HOST: "0.0.0.0"
       SERVER_PORT: "5555"
-      DATAMANAGER_URL: ${DATAMANAGER_URL:-http://localhost:8686}
+      DATAMANAGER_URL: ${DATAMANAGER_URL:-http://datamanager-server:8686}
       DATAMANAGER_API_KEY: ${DATAMANAGER_API_KEY:-}
       ENABLE_NOTIFICATIONS: ${ENABLE_NOTIFICATIONS:-false}
       TELEGRAM_TOKEN: ${TELEGRAM_TOKEN:-}
@@ -24,24 +24,9 @@ services:
     volumes:
       - tradingmonitor_reports:/app/reports
 
-  timescaledb:
-    image: timescale/timescaledb:latest-pg15
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
-      POSTGRES_DB: tradingmonitor
-    ports:
-      - "127.0.0.1:5433:5432"
-    volumes:
-      - timescaledb_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d tradingmonitor"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+networks:
+  datamanager_default:
+    external: true
 
 volumes:
-  timescaledb_data:
   tradingmonitor_reports:
