@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+.env
+
+# uv
+uv.lock
+
+# Pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+log.log
+ingestion.log
+
+# Alembic
+alembic/versions/__pycache__/
+
+# Data / exports
+*.csv
+*.parquet
+cache_*.json
+*.png
+*.jpg

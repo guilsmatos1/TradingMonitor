@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+{% block title %}Correlation Analysis — Portfolio {{ portfolio_id }}{% endblock %}
+
+{% block chartjs %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Overview</a>
+    <span class="breadcrumb-sep" aria-hidden="true">›</span>
+    <a href="/portfolio/{{ portfolio_id }}">Portfolio {{ portfolio_id }}</a>
+    <span class="breadcrumb-sep" aria-hidden="true">›</span>
+    <span aria-current="page">Correlation</span>
+</nav>
+<div class="page-header">
+    <h1><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg> Correlation Analysis</h1>
+    <span id="portfolio-name" class="text-muted" style="font-size:0.85rem;font-weight:400"></span>
+</div>
+
+<!-- Correlation Matrix -->
+<div class="card" style="margin-bottom:1rem">
+    <div class="section-header">
+        <h2>Returns Correlation Matrix</h2>
+        <div class="period-tabs">
+            <button class="period-tab active" data-period="daily"   onclick="setPeriod('daily')">Daily</button>
+            <button class="period-tab"        data-period="weekly"  onclick="setPeriod('weekly')">Weekly</button>
+            <button class="period-tab"        data-period="monthly" onclick="setPeriod('monthly')">Monthly</button>
+        </div>
+    </div>
+    <p class="corr-description text-muted" id="corr-desc"></p>
+    <div id="corr-container" style="margin-top:1rem"><div class="loading">Loading...</div></div>
+    <div id="corr-insights" class="insights-row" style="margin-top:1.25rem"></div>
+</div>
+
+<!-- Dynamic Correlation (Rolling) -->
+<div class="card" style="margin-bottom:1rem">
+    <div class="section-header">
+        <h2>Dynamic Correlation (Rolling Window)</h2>
+        <div class="period-tabs">
+            <button class="period-tab"        data-window="7"  onclick="setWindow(7)">Last 7 Days</button>
+            <button class="period-tab active" data-window="30" onclick="setWindow(30)">Last 30 Days</button>
+            <button class="period-tab"        data-window="90" onclick="setWindow(90)">Last 90 Days</button>
+        </div>
+    </div>
+    <p class="text-muted" style="font-size:0.8rem;margin-top:0.25rem">
+        Short-term correlation check to identify recent strategy drift or regime changes.
+    </p>
+    <div id="dynamic-corr-container" style="margin-top:1rem"><div class="loading">Loading...</div></div>
+</div>
+
+<!-- Concurrent Operations -->
+<div class="card">
+    <div class="section-header">
+        <h2>Concurrent Operations Probability</h2>
+        <div class="period-tabs">
+            <button class="period-tab active" data-conc="same_day"  onclick="setConcMode('same_day')">Same Day</button>
+            <button class="period-tab"        data-conc="same_week" onclick="setConcMode('same_week')">Same Week</button>
+            <button class="period-tab"        data-conc="same_hour" onclick="setConcMode('same_hour')">Same Hour</button>
+        </div>
+    </div>
+    <p class="text-muted" style="font-size:0.8rem;margin-top:0.25rem">
+        Percentage of periods where both strategies had at least one trade.
+        High values indicate simultaneous market exposure and compounded risk.
+    </p>
+    <div id="conc-container" style="margin-top:1rem"><div class="loading">Loading...</div></div>
+    <div id="conc-insights" class="insights-row" style="margin-top:1.25rem"></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>const PORTFOLIO_ID = {{ portfolio_id }};</script>
+<script src="/static/page-correlation.js?v={{ js_v }}"></script>
+{% endblock %}

@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+{% block title %}TradingMonitor — Advanced Analysis{% endblock %}
+
+{% block chartjs %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Overview</a>
+    <span class="breadcrumb-sep" aria-hidden="true">›</span>
+    <span aria-current="page">Advanced Analysis</span>
+</nav>
+<div class="page-header">
+    <h1><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Advanced Analysis</h1>
+</div>
+
+<style>
+    #advanced-analysis-params {
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        width: 100%;
+        max-width: none;
+    }
+    #advanced-analysis-params .field-group {
+        min-width: 0;
+    }
+    #advanced-analysis-params .field-group.advanced-side-field {
+        align-items: flex-start;
+    }
+    #advanced-analysis-params #new-strategy-search {
+        width: 100%;
+        max-width: none;
+    }
+    #param-side-tabs,
+    #analysis-equity-scale-tabs {
+        margin-left: 0;
+        margin-right: auto;
+        width: max-content;
+    }
+    #analysis-metrics.metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    #analysis-metrics.metrics-categories { display: flex; flex-direction: column; gap: 1.25rem; }
+    .metrics-category-title {
+        font-size: 0.72rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+        margin: 0 0 0.6rem;
+    }
+    .metrics-category .metrics-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    .analysis-status { margin-left:0.75rem; font-size:0.85rem; color:var(--text-muted); }
+    .analysis-status.is-loading { color: var(--text-muted); }
+    .analysis-status.is-success { color: var(--green); }
+    .analysis-status.is-error { color: var(--red); }
+    .analysis-error {
+        margin-top: 1rem;
+        padding: 0.9rem 1rem;
+        border-radius: 8px;
+        border: 1px solid rgba(239, 68, 68, 0.35);
+        background: rgba(239, 68, 68, 0.08);
+    }
+    .analysis-error[hidden] { display: none; }
+    .analysis-error-title { display:block; font-size:0.78rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--red); margin-bottom:0.35rem; }
+    .analysis-error-message { color: var(--text); font-size: 0.9rem; line-height: 1.4; }
+    @media (max-width: 900px) {
+        #analysis-metrics.metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        .metrics-category .metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+        #analysis-metrics.metrics-grid { grid-template-columns: 1fr; }
+        .metrics-category .metrics-grid { grid-template-columns: 1fr; }
+    }
+</style>
+
+<div class="dashboard-grid">
+    <section class="card full-width">
+        <div class="section-header">
+            <h2>Parameters</h2>
+        </div>
+        <div id="advanced-analysis-params" class="edit-grid">
+            <div class="field-group">
+                <span class="field-label">Date From</span>
+                <input class="field-input" type="date" id="param-date-from">
+            </div>
+            <div class="field-group">
+                <span class="field-label">Date To</span>
+                <input class="field-input" type="date" id="param-date-to">
+            </div>
+            <div class="field-group">
+                <span class="field-label">Initial Balance</span>
+                <input class="field-input" type="number" id="param-initial-balance" placeholder="e.g. 10000" step="0.01">
+            </div>
+            <div class="field-group">
+                <span class="field-label">History Type</span>
+                <select class="field-input" id="param-history-type">
+                    <option value="real">Real</option>
+                    <option value="demo" selected>Demo</option>
+                    <option value="backtest">Backtest</option>
+                </select>
+            </div>
+            <div class="field-group">
+                <span class="field-label">Benchmark</span>
+                <select class="field-input" id="param-benchmark"></select>
+            </div>
+            <div class="field-group advanced-side-field">
+                <span class="field-label">Side</span>
+                <div class="period-tabs" id="param-side-tabs" style="margin-top:0.25rem">
+                    <button class="period-tab active" data-side="both"  onclick="setAdvancedSide('both')">Both</button>
+                    <button class="period-tab"        data-side="buy"   onclick="setAdvancedSide('buy')">Buy</button>
+                    <button class="period-tab"        data-side="sell"  onclick="setAdvancedSide('sell')">Sell</button>
+                </div>
+            </div>
+            <div class="field-group" style="grid-column:1 / -1">
+                <span class="field-label" style="margin-bottom:0.4rem">Strategies</span>
+                <input class="field-input" type="text" id="new-strategy-search" placeholder="Search strategies…" oninput="filterModalStrategies()" style="margin-bottom:0.5rem">
+                <div id="new-strategy-list" class="strategy-checklist" style="padding:0; max-height:400px; overflow-y:auto; border:1px solid var(--border-color); border-radius:4px;"><div class="loading" style="padding:0.5rem">Loading…</div></div>
+            </div>
+        </div>
+        <div style="margin-top:1rem; display:flex; align-items:center; gap:0.75rem">
+            <button id="analysis-update-btn" class="btn btn-primary btn-sm" onclick="runAdvancedAnalysis()">Update</button>
+            <a id="correlation-link" class="btn btn-ghost btn-sm" style="display:none" target="_blank">Correlation</a>
+            <span id="analysis-status" class="analysis-status"></span>
+        </div>
+        <div id="analysis-error" class="analysis-error" hidden>
+            <span class="analysis-error-title">Analysis Error</span>
+            <div id="analysis-error-message" class="analysis-error-message"></div>
+        </div>
+    </section>
+
+    <section class="card full-width" id="equity-section" style="display:none">
+        <div class="section-header">
+            <h2>Equity Curve</h2>
+            <span id="analysis-range" class="badge badge-neutral"></span>
+            <button class="btn-chart-action" style="margin-left:auto" onclick="exportChart('equity-chart', 'advanced_equity.png')" title="Export image">Export</button>
+            <div class="period-tabs" id="analysis-equity-scale-tabs" style="margin-left:0.75rem">
+                <button class="period-tab" data-aes="monetary" onclick="setAnalysisEquityScale('monetary')">$</button>
+                <button class="period-tab" data-aes="pct" onclick="setAnalysisEquityScale('pct')">%</button>
+            </div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="equity-chart"></canvas>
+        </div>
+    </section>
+
+    <!-- Underwater (Drawdown) Chart -->
+    <section class="card full-width" id="underwater-section" style="display:none">
+        <div class="section-header">
+            <h2>Drawdown Underwater</h2>
+            <button class="btn-chart-action" style="margin-left:auto" onclick="exportChart('analysis-underwater-chart', 'advanced_drawdown.png')" title="Export image">Export</button>
+        </div>
+        <div class="chart-wrapper" style="height:150px">
+            <canvas id="analysis-underwater-chart"></canvas>
+        </div>
+    </section>
+
+    <section class="card full-width" id="metrics-section" style="display:none">
+        <div class="section-header">
+            <h2>Main Metrics</h2>
+        </div>
+        <div id="analysis-metrics" class="metrics-grid"></div>
+    </section>
+
+    <section class="card" id="positive-contrib-section" style="display:none">
+        <div class="section-header">
+            <h2>Positive Contribution</h2>
+        </div>
+        <div class="chart-wrapper" style="max-height:360px; display:flex; justify-content:center;">
+            <canvas id="positive-contrib-chart"></canvas>
+        </div>
+    </section>
+
+    <section class="card" id="negative-contrib-section" style="display:none">
+        <div class="section-header">
+            <h2>Negative Contribution</h2>
+        </div>
+        <div class="chart-wrapper" style="max-height:360px; display:flex; justify-content:center;">
+            <canvas id="negative-contrib-chart"></canvas>
+        </div>
+    </section>
+
+    <!-- Strategy Equity Overlay -->
+    <section class="card full-width" id="overlay-section" style="display:none">
+        <div class="section-header">
+            <h2>Strategy Equity Overlay</h2>
+            <button class="btn-chart-action" style="margin-left:auto" onclick="exportChart('overlay-chart', 'strategy_overlay.png')" title="Export image">Export</button>
+            <div class="period-tabs" id="overlay-scale-tabs" style="margin-left:0.75rem">
+                <button class="period-tab" data-os="monetary" onclick="setOverlayScale('monetary')">$</button>
+                <button class="period-tab" data-os="pct" onclick="setOverlayScale('pct')">%</button>
+            </div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="overlay-chart"></canvas>
+        </div>
+    </section>
+
+    <!-- P&L Analysis -->
+    <section class="card full-width" id="monthly-section" style="display:none">
+        <div class="section-header">
+            <h2>P&amp;L Analysis</h2>
+            <div style="margin-left:auto; display:flex; gap:0.4rem">
+                <button class="btn-chart-action" onclick="exportChart('monthly-pnl-chart', 'pnl_analysis_month.png')" title="Export P&amp;L by Month">Export Month</button>
+                <button class="btn-chart-action" onclick="exportChart('annual-pnl-chart', 'pnl_analysis_year.png')" title="Export P&amp;L by Year">Export Year</button>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+            <div>
+                <p class="chart-subtitle">By Month</p>
+                <div id="monthly-pnl-wrapper" class="chart-wrapper-sm"><canvas id="monthly-pnl-chart"></canvas></div>
+            </div>
+            <div>
+                <p class="chart-subtitle">By Year</p>
+                <div id="annual-pnl-wrapper" class="chart-wrapper-sm"><canvas id="annual-pnl-chart"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trade Distribution -->
+    <section class="card full-width" id="distribution-section" style="display:none">
+        <div class="section-header">
+            <h2>Trade Distribution</h2>
+            <div style="margin-left:auto; display:flex; gap:0.4rem">
+                <button class="btn-chart-action" onclick="exportChart('dist-hour-chart', 'distribution_hour.png')" title="Export Distribution by Hour">Export Hour</button>
+                <button class="btn-chart-action" onclick="exportChart('dist-dow-chart', 'distribution_dow.png')" title="Export Distribution by Day">Export Day</button>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+            <div>
+                <p class="chart-subtitle">By Hour of Day</p>
+                <div id="dist-hour-wrapper" class="chart-wrapper" style="height:200px"><canvas id="dist-hour-chart"></canvas></div>
+            </div>
+            <div>
+                <p class="chart-subtitle">By Day of Week</p>
+                <div id="dist-dow-wrapper" class="chart-wrapper" style="height:200px"><canvas id="dist-dow-chart"></canvas></div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/table-renderer.js?v={{ js_v }}"></script>
+<script src="/static/page-advanced.js?v={{ js_v }}"></script>
+{% endblock %}

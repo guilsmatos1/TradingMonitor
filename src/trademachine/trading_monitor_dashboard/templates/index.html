@@ -1,0 +1,262 @@
+{% extends "base.html" %}
+{% block title %}TradingMonitor — Overview{% endblock %}
+
+{% block chartjs %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> Overview</h1>
+</div>
+
+<!-- Summary Cards -->
+<div class="summary-cards">
+    <div class="summary-card">
+        <span class="summary-num" id="count-strategies">—</span>
+        <span class="summary-label">Strategies</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-num" id="count-portfolios">—</span>
+        <span class="summary-label">Portfolios</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-num" id="count-accounts">—</span>
+        <span class="summary-label">Accounts</span>
+    </div>
+</div>
+
+<!-- Charts Row -->
+<div class="charts-row" style="grid-template-columns:repeat(3,1fr)">
+    <div class="card">
+        <div class="section-header">
+            <h2>Strategies by Symbol</h2>
+        </div>
+        <div class="chart-box">
+            <canvas id="pie-symbol"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="section-header">
+            <h2>Strategies by Operational Style</h2>
+        </div>
+        <div class="chart-box">
+            <canvas id="pie-style"></canvas>
+        </div>
+    </div>
+    <div class="card">
+        <div class="section-header">
+            <h2>Strategies by Duration</h2>
+        </div>
+        <div class="chart-box">
+            <canvas id="pie-duration"></canvas>
+        </div>
+    </div>
+</div>
+
+<!-- Zero-state onboarding (shown when there are no strategies) -->
+<div id="zero-state" class="zero-state-banner" style="display:none">
+    <div class="zero-state-inner">
+        <div class="zero-state-icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+        </div>
+        <h2 class="zero-state-title">Welcome to TradingMonitor</h2>
+        <p class="zero-state-sub">No strategies detected yet. Follow these steps to get started:</p>
+        <ol class="zero-state-steps">
+            <li>
+                <span class="zero-state-step-num">1</span>
+                <div>
+                    <strong>Download the EA</strong>
+                    <span>Get the MetricsPublisher.mq5 Expert Advisor from <a href="/settings">Settings → General</a>.</span>
+                </div>
+            </li>
+            <li>
+                <span class="zero-state-step-num">2</span>
+                <div>
+                    <strong>Install &amp; configure in MetaTrader 5</strong>
+                    <span>Attach the EA to a chart, set the <code>MagicNumber</code> (strategy ID) and the server address.</span>
+                </div>
+            </li>
+            <li>
+                <span class="zero-state-step-num">3</span>
+                <div>
+                    <strong>Start trading</strong>
+                    <span>The EA will publish DEAL, EQUITY, and ACCOUNT events automatically on every tick.</span>
+                </div>
+            </li>
+            <li>
+                <span class="zero-state-step-num">4</span>
+                <div>
+                    <strong>Refresh this page</strong>
+                    <span>Your strategies will appear here as soon as the first event is received.</span>
+                </div>
+            </li>
+        </ol>
+        <a href="/settings" class="btn btn-primary" style="margin-top:1rem">Go to Settings</a>
+    </div>
+</div>
+
+<!-- Section tab bar -->
+<div class="section-tabs">
+    <button class="section-tab active" onclick="showTab('strategies')">Strategies</button>
+    <button class="section-tab" onclick="showTab('portfolios')">Portfolios</button>
+    <button class="section-tab" onclick="showTab('accounts')">Accounts</button>
+    <button class="section-tab" onclick="showTab('symbols')">Symbols</button>
+</div>
+
+<!-- ── STRATEGIES TAB ── -->
+<div id="tab-strategies">
+    <div class="card" style="margin-top:0.5rem">
+        <div class="section-header">
+            <h2>Strategies</h2>
+            <span id="badge-strategies" class="badge badge-neutral"></span>
+            <button class="btn btn-ghost btn-sm" style="margin-left:auto" title="Export CSV" onclick="exportTableCSV('strategies')">Export</button>
+        </div>
+        <div style="padding:0.4rem 0 0.25rem;display:flex;align-items:center;gap:0.5rem">
+            <input class="field-input" type="text" id="strat-search" placeholder="Search…" oninput="renderStrategiesTable()" style="max-width:200px">
+            <select id="strat-page-size" class="field-input" style="width:auto" onchange="renderStrategiesTable()"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select>
+            <span class="text-muted" style="font-size:0.8rem">per page</span>
+        </div>
+        <div id="table-all-strategies"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+        <div id="strat-pagination" class="pagination"></div>
+    </div>
+</div>
+
+<!-- ── PORTFOLIOS TAB ── -->
+<div id="tab-portfolios" style="display:none">
+    <div class="card">
+        <div class="section-header">
+            <h2>Portfolios</h2>
+            <span id="portfolios-badge" class="badge badge-neutral"></span>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openCreateModal()">+ New Portfolio</button>
+            <button class="btn btn-ghost btn-sm" title="Export CSV" onclick="exportTableCSV('portfolios')">Export</button>
+        </div>
+        <div style="padding:0.4rem 0 0.25rem;display:flex;align-items:center;gap:0.5rem">
+            <input class="field-input" type="text" id="portfolio-search" placeholder="Search…" oninput="filterPortfolioTable()" style="max-width:180px">
+            <select id="port-page-size" class="field-input" style="width:auto" onchange="renderPortfoliosTable()"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select>
+            <span class="text-muted" style="font-size:0.8rem">per page</span>
+        </div>
+        <div id="portfolios-table-container"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+        <div id="port-pagination" class="pagination"></div>
+    </div>
+</div>
+
+<!-- ── ACCOUNTS TAB ── -->
+<div id="tab-accounts" style="display:none">
+    <div class="card">
+        <div class="section-header">
+            <h2>Trading Accounts</h2>
+            <span id="accounts-badge" class="badge badge-neutral"></span>
+            <button class="btn btn-ghost btn-sm" style="margin-left:auto" title="Export CSV" onclick="exportTableCSV('accounts')">Export</button>
+        </div>
+        <div style="padding:0.4rem 0 0.25rem;display:flex;align-items:center;gap:0.5rem">
+            <input class="field-input" type="text" id="accounts-search" placeholder="Search…" oninput="filterAccountsTable()" style="max-width:180px">
+            <select id="acct-page-size" class="field-input" style="width:auto" onchange="renderAccountsTable()"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select>
+            <span class="text-muted" style="font-size:0.8rem">per page</span>
+        </div>
+        <div id="accounts-table-container"><div class="skel skel-row"></div><div class="skel skel-row"></div></div>
+        <div id="acct-pagination" class="pagination"></div>
+    </div>
+</div>
+
+<!-- ── SYMBOLS TAB ── -->
+<div id="tab-symbols" style="display:none">
+    <div class="card">
+        <div class="section-header">
+            <h2>Symbols</h2>
+            <span id="symbols-badge" class="badge badge-neutral"></span>
+            <button class="btn btn-primary btn-sm" style="margin-left:auto" onclick="openAddSymbolModal()">+ New Symbol</button>
+            <button class="btn btn-ghost btn-sm" title="Export CSV" onclick="exportTableCSV('symbols')">Export</button>
+        </div>
+        <div style="padding:0.4rem 0 0.25rem;display:flex;align-items:center;gap:0.5rem">
+            <input class="field-input" type="text" id="symbols-search" placeholder="Search…" oninput="renderSymbolsTable()" style="max-width:180px">
+            <select id="sym-page-size" class="field-input" style="width:auto" onchange="renderSymbolsTable()"><option value="25">25</option><option value="50">50</option><option value="100">100</option><option value="200">200</option></select>
+            <span class="text-muted" style="font-size:0.8rem">per page</span>
+        </div>
+        <div id="symbols-table-container"><div class="skel skel-row"></div></div>
+        <div id="sym-pagination" class="pagination"></div>
+    </div>
+</div>
+
+<!-- New Symbol Modal -->
+<div id="modal-symbol-overlay" class="modal-overlay" style="display:none" onclick="if(event.target.id==='modal-symbol-overlay')closeSymbolModal()">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title" id="symbol-modal-title">New Symbol</span>
+            <button class="modal-close" onclick="closeSymbolModal()" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="edit-grid">
+                <div class="field-group">
+                    <span class="field-label">Name *</span>
+                    <input class="field-input" type="text" id="sym-name" placeholder="EURUSD, BTCUSD…">
+                </div>
+                <div class="field-group">
+                    <span class="field-label">Market</span>
+                    <select class="field-input" id="sym-market">
+                        <option value="">— Select —</option>
+                        <option value="Forex">Forex</option>
+                        <option value="Crypto">Crypto</option>
+                        <option value="Futures">Futures</option>
+                        <option value="Indices">Indices</option>
+                        <option value="Stocks">Stocks</option>
+                        <option value="Commodities">Commodities</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="field-group">
+                    <span class="field-label">Lot Tick</span>
+                    <input class="field-input" type="number" step="any" id="sym-lot" placeholder="0.01">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary btn-sm" onclick="saveSymbol()">Save</button>
+            <button class="btn btn-ghost btn-sm" onclick="closeSymbolModal()">Cancel</button>
+            <span id="sym-status" class="edit-status"></span>
+        </div>
+    </div>
+</div>
+
+<!-- Create / Edit Portfolio Modal -->
+<div id="modal-overlay" class="modal-overlay" style="display:none" onclick="closeModal(event)">
+    <div class="modal-box">
+        <div class="modal-header">
+            <span class="modal-title" id="portfolio-modal-title">New Portfolio</span>
+            <button class="modal-close" onclick="closeCreateModal()" aria-label="Close">✕</button>
+        </div>
+        <div class="modal-body">
+            <div class="edit-grid">
+                <div class="field-group">
+                    <span class="field-label">Name *</span>
+                    <input class="field-input" type="text" id="new-name" placeholder="Portfolio name">
+                </div>
+                <div class="field-group">
+                    <span class="field-label">Initial Balance</span>
+                    <input class="field-input" type="number" step="any" id="new-initial-balance" placeholder="e.g. 10000">
+                </div>
+                <div class="field-group" style="grid-column:1 / -1">
+                    <span class="field-label">Description</span>
+                    <input class="field-input" type="text" id="new-description" placeholder="Short description…">
+                </div>
+            </div>
+            <div class="field-group">
+                <span class="field-label" style="margin-bottom:0.4rem">Strategies</span>
+                <input class="field-input" type="text" id="new-strategy-search" placeholder="Search strategies…" oninput="filterModalStrategies()" style="margin-bottom:0.5rem">
+                <div id="new-strategy-list" class="strategy-checklist" style="padding:0"><div class="loading" style="padding:0.5rem">Loading…</div></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-primary btn-sm" id="portfolio-modal-submit-btn" onclick="createOrUpdatePortfolio()">Create Portfolio</button>
+            <button class="btn btn-ghost btn-sm" onclick="closeCreateModal()">Cancel</button>
+            <span id="create-status" class="edit-status"></span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/table-renderer.js?v={{ js_v }}"></script>
+<script src="/static/api-client.js?v={{ js_v }}"></script>
+<script src="/static/page-index.js?v={{ js_v }}"></script>
+{% endblock %}

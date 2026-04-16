@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="api-key" content="{{ api_key }}">
+    <meta name="description" content="Real-time trading strategy monitor and performance analytics dashboard">
+    <title>{% block title %}TradingMonitor{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 3v18h18'/%3E%3Cpath d='m19 9-5 5-4-4-3 3'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+    <script>
+        (function() {
+            const t = localStorage.getItem("tm-theme") || "dark";
+            document.documentElement.setAttribute("data-theme", t);
+        })();
+    </script>
+    <script defer src="https://unpkg.com/htmx.org@2.0.3"></script>
+    <script defer src="https://unpkg.com/htmx-ext-ws@2.0.1/ws.js"></script>
+    {% block chartjs %}{% endblock %}
+</head>
+<body>
+    <nav class="navbar">
+        <a class="nav-brand" href="/">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            TradingMonitor
+        </a>
+        {% set path = request.url.path %}
+        <div class="nav-links">
+            <a href="/" class="{{ 'active' if path == '/' else '' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg>
+                Overview
+            </a>
+            <a href="/real" class="{{ 'active' if path == '/real' else '' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                Live Monitor
+            </a>
+            <div class="nav-dropdown" id="strategies-nav">
+                <button type="button" class="nav-dropdown-toggle {{ 'active' if path.startswith('/strategy') else '' }}" id="strategies-toggle" aria-expanded="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg>
+                    <span>Strategies</span>
+                </button>
+                <div class="nav-dropdown-menu" id="strategies-menu">
+                    <div class="nav-dropdown-state" id="strategies-menu-state">Loading...</div>
+                    <div id="strategies-menu-items"></div>
+                </div>
+            </div>
+            <div class="nav-dropdown" id="portfolios-nav">
+                <button type="button" class="nav-dropdown-toggle {{ 'active' if path.startswith('/portfolio') else '' }}" id="portfolios-toggle" aria-expanded="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/><rect width="20" height="14" x="2" y="6" rx="2"/></svg>
+                    <span>Portfolios</span>
+                </button>
+                <div class="nav-dropdown-menu" id="portfolios-menu">
+                    <div class="nav-dropdown-state" id="portfolios-menu-state">Loading...</div>
+                    <div id="portfolios-menu-items"></div>
+                </div>
+            </div>
+            <div class="nav-dropdown" id="accounts-nav">
+                <button type="button" class="nav-dropdown-toggle {{ 'active' if path.startswith('/account') else '' }}" id="accounts-toggle" aria-expanded="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                    <span>Accounts</span>
+                </button>
+                <div class="nav-dropdown-menu" id="accounts-menu">
+                    <div class="nav-dropdown-state" id="accounts-menu-state">Loading...</div>
+                    <div id="accounts-menu-items"></div>
+                </div>
+            </div>
+            <div class="nav-dropdown" id="symbols-nav">
+                <button type="button" class="nav-dropdown-toggle {{ 'active' if path.startswith('/symbol') else '' }}" id="symbols-toggle" aria-expanded="false">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="9" x2="9" y1="4" y2="20"/><line x1="15" x2="15" y1="4" y2="20"/></svg>
+                    <span>Symbols</span>
+                </button>
+                <div class="nav-dropdown-menu" id="symbols-menu">
+                    <div class="nav-dropdown-state" id="symbols-menu-state">Loading...</div>
+                    <div id="symbols-menu-items"></div>
+                </div>
+            </div>
+            <a href="/benchmarks" class="{{ 'active' if path.startswith('/benchmark') else '' }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg>
+                Benchmarks
+            </a>
+        </div>
+        <button id="nav-hamburger" class="nav-hamburger" aria-label="Open menu" aria-expanded="false">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
+        </button>
+        <div class="nav-status">
+            <div class="nav-links">
+                <a href="/settings" class="{{ 'active' if path == '/settings' else '' }}">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Settings
+                </a>
+            </div>
+            <button id="theme-toggle" class="btn-theme" onclick="toggleTheme()" title="Toggle theme" aria-label="Toggle theme">
+                <svg id="theme-icon-dark" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+                <svg id="theme-icon-light" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+            </button>
+            <span id="ws-status" class="badge badge-inactive" role="status" aria-live="polite">Offline</span>
+        </div>
+    </nav>
+
+    <div hx-ext="ws" ws-connect="/ws" id="ws-container">
+        <div id="ws-events" style="display:none"></div>
+    </div>
+
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/static/dashboard.js?v={{ js_v }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

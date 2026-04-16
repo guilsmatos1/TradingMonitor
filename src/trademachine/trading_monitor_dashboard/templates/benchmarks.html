@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}TradingMonitor — Benchmarks{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20V10"/><path d="M18 20V4"/><path d="M6 20v-4"/></svg> Benchmarks</h1>
+</div>
+
+<div class="dashboard-grid">
+    <section class="card full-width">
+        <div class="section-header">
+            <h2>Add Benchmark</h2>
+        </div>
+        <div class="edit-grid benchmark-form-grid">
+            <div class="field-group">
+                <span class="field-label">Name</span>
+                <input class="field-input" id="benchmark-name" type="text" placeholder="S&P 500">
+            </div>
+            <div class="field-group">
+                <span class="field-label">Source</span>
+                <input class="field-input" id="benchmark-source" type="text" value="OPENBB">
+            </div>
+            <div class="field-group">
+                <span class="field-label">Asset</span>
+                <input class="field-input" id="benchmark-asset" type="text" placeholder="SPY">
+            </div>
+            <div class="field-group">
+                <span class="field-label">Timeframe</span>
+                <input class="field-input" id="benchmark-timeframe" type="text" value="D1">
+            </div>
+            <div class="field-group benchmark-form-full-width">
+                <span class="field-label">Description</span>
+                <input class="field-input" id="benchmark-description" type="text" placeholder="US large cap proxy">
+            </div>
+        </div>
+        <div class="edit-toggles" style="margin-top:1rem">
+            <label class="toggle-group"><input type="checkbox" id="benchmark-enabled" checked><span class="toggle-label">Enabled</span></label>
+            <label class="toggle-group"><input type="checkbox" id="benchmark-default"><span class="toggle-label">Default Benchmark</span></label>
+        </div>
+        <div style="margin-top:1rem">
+            <button class="btn btn-primary btn-sm" onclick="createBenchmark()">Add Benchmark</button>
+            <span id="benchmarks-status" style="margin-left:0.75rem;font-size:0.85rem;color:var(--text-muted)"></span>
+        </div>
+    </section>
+
+    <section class="card full-width">
+        <div class="section-header">
+            <h2>Configured Benchmarks</h2>
+        </div>
+        <div id="benchmarks-table"><div class="loading">Loading benchmarks...</div></div>
+    </section>
+
+    <section class="card full-width">
+        <div class="section-header">
+            <h2>Available in DataManager</h2>
+        </div>
+        <div id="benchmarks-remote-table"><div class="loading">Loading remote databases...</div></div>
+    </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/page-benchmarks.js?v={{ js_v }}"></script>
+{% endblock %}

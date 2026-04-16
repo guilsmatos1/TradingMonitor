@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}TradingMonitor — Symbol {{ symbol_name }}{% endblock %}
+
+{% block content %}
+<style>
+    #symbol-summary {
+        margin-top: 1rem;
+    }
+    #symbol-summary .summary-num {
+        font-size: 1.75rem;
+    }
+    #symbol-strategies-card,
+    #symbol-empty {
+        margin-top: 1rem;
+    }
+    @media (max-width: 640px) {
+        #symbol-summary .summary-num {
+            font-size: 1.45rem;
+        }
+    }
+</style>
+<div class="page-header">
+    <h1 id="symbol-title"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="9" y2="9"/><line x1="4" x2="20" y1="15" y2="15"/><line x1="9" x2="9" y1="4" y2="20"/><line x1="15" x2="15" y1="4" y2="20"/></svg> Symbol {{ symbol_name }}</h1>
+</div>
+
+<div class="summary-cards" id="symbol-summary" style="display:none">
+    <div class="summary-card">
+        <span class="summary-num" id="symbol-name">{{ symbol_name }}</span>
+        <span class="summary-label">Symbol</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-num" id="symbol-market">—</span>
+        <span class="summary-label">Market</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-num" id="symbol-lot">—</span>
+        <span class="summary-label">Lot Tick</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-num" id="symbol-strategy-count">—</span>
+        <span class="summary-label">Strategies</span>
+    </div>
+</div>
+
+<div class="card" id="symbol-strategies-card" style="display:none">
+    <div class="section-header">
+        <h2>Strategies</h2>
+        <span id="symbol-strategies-badge" class="badge badge-neutral">0</span>
+    </div>
+    <div style="padding:0.4rem 0 0.25rem;display:flex;align-items:center;gap:0.5rem">
+        <input class="field-input" type="text" id="symbol-strat-search" placeholder="Search…" oninput="renderSymbolStrategies()" style="max-width:200px">
+        <select id="symbol-strat-page-size" class="field-input" style="width:auto" onchange="renderSymbolStrategies()">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+        </select>
+        <span class="text-muted" style="font-size:0.8rem">per page</span>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead id="symbol-strategies-head"></thead>
+            <tbody id="symbol-strategies-body"></tbody>
+        </table>
+    </div>
+    <div id="symbol-strat-pagination" class="pagination"></div>
+</div>
+
+<div id="symbol-empty" class="card" style="display:none">
+    <p class="empty-state">Symbol not found.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>const SYMBOL_NAME = {{ symbol_name | tojson }};</script>
+<script src="/static/table-renderer.js?v={{ js_v }}"></script>
+<script src="/static/page-symbol.js?v={{ js_v }}"></script>
+{% endblock %}

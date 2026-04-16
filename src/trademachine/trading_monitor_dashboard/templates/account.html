@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+{% block title %}TradingMonitor — Account {{ account_id }}{% endblock %}
+
+{% block content %}
+<style>
+    #account-summary,
+    #account-details-card,
+    #account-strategies-card,
+    #account-empty {
+        margin-top: 1rem;
+    }
+    #account-summary .summary-num {
+        font-size: 1.75rem;
+    }
+    #account-meta.info-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+    @media (max-width: 900px) {
+        #account-meta.info-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+    @media (max-width: 640px) {
+        #account-summary .summary-num {
+            font-size: 1.45rem;
+        }
+        #account-meta.info-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Overview</a>
+    <span class="breadcrumb-sep" aria-hidden="true">›</span>
+    <span aria-current="page">Account {{ account_id }}</span>
+</nav>
+<div class="page-header">
+    <h1 id="account-title"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg> Account {{ account_id }}</h1>
+</div>
+
+<div class="summary-cards" id="account-summary" style="display:none">
+    <div class="summary-card">
+        <span class="summary-num" id="account-name">{{ account_id }}</span>
+        <span class="summary-label">Account</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-num" id="account-broker">—</span>
+        <span class="summary-label">Broker</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-num" id="account-balance">—</span>
+        <span class="summary-label">Balance</span>
+    </div>
+    <div class="summary-card">
+        <span class="summary-num" id="account-strategy-count">—</span>
+        <span class="summary-label">Strategies</span>
+    </div>
+</div>
+
+<div class="card" id="account-details-card" style="display:none">
+    <div class="section-header">
+        <h2>Account Details</h2>
+    </div>
+    <div class="info-grid" id="account-meta"></div>
+</div>
+
+<div class="card" id="account-strategies-card" style="display:none">
+    <div class="section-header">
+        <h2>Strategies</h2>
+        <span id="account-strategies-badge" class="badge badge-neutral">0</span>
+    </div>
+    <div style="padding:0.4rem 0 0.25rem;display:flex;align-items:center;gap:0.5rem">
+        <input class="field-input" type="text" id="account-strat-search" placeholder="Search…" oninput="renderAccountStrategies()" style="max-width:200px">
+        <select id="account-strat-page-size" class="field-input" style="width:auto" onchange="renderAccountStrategies()">
+            <option value="25">25</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+            <option value="200">200</option>
+        </select>
+        <span class="text-muted" style="font-size:0.8rem">per page</span>
+    </div>
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead id="account-strategies-head"></thead>
+            <tbody id="account-strategies-body"></tbody>
+        </table>
+    </div>
+    <div id="account-strat-pagination" class="pagination"></div>
+</div>
+
+<div id="account-empty" class="card" style="display:none">
+    <p class="empty-state">Account not found.</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>const ACCOUNT_ID = {{ account_id | tojson }};</script>
+<script src="/static/table-renderer.js?v={{ js_v }}"></script>
+<script src="/static/page-account.js?v={{ js_v }}"></script>
+{% endblock %}

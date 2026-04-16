@@ -1,0 +1,263 @@
+{% extends "base.html" %}
+{% block title %}TradingMonitor — Strategy {{ strategy_id }}{% endblock %}
+
+{% block chartjs %}
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8/hammer.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+{% endblock %}
+
+{% block content %}
+<style>
+    #metrics-container.metrics-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #info-container.info-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .strategy-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    @media (max-width: 900px) {
+        #info-container.info-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        #metrics-container.metrics-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+        #info-container.info-grid { grid-template-columns: 1fr; }
+        #metrics-container.metrics-grid { grid-template-columns: 1fr; }
+    }
+</style>
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+    <a href="/">Overview</a>
+    <span class="breadcrumb-sep" aria-hidden="true">›</span>
+    <a href="/" onclick="event.preventDefault();history.back()">Strategies</a>
+    <span class="breadcrumb-sep" aria-hidden="true">›</span>
+    <span aria-current="page">{{ strategy_id }}</span>
+</nav>
+<div class="page-header">
+    <h1 id="strategy-title"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Strategy <span class="mono">{{ strategy_id }}</span></h1>
+    <span id="strategy-status-badge" class="badge"></span>
+    <div class="page-header-actions">
+        <div class="strategy-nav">
+            <button id="strategy-prev-btn" class="btn btn-ghost btn-sm" type="button" onclick="navigateStrategy(-1)" title="Previous strategy" disabled>←</button>
+            <button id="strategy-next-btn" class="btn btn-ghost btn-sm" type="button" onclick="navigateStrategy(1)" title="Next strategy" disabled>→</button>
+        </div>
+        <div class="period-tabs" id="side-filter-tabs">
+            <button class="period-tab active" data-side="both"  onclick="setSideFilter('both')">Both</button>
+            <button class="period-tab"        data-side="buy"   onclick="setSideFilter('buy')">Buy</button>
+            <button class="period-tab"        data-side="sell"  onclick="setSideFilter('sell')">Sell</button>
+        </div>
+        <div class="period-tabs">
+            <button class="period-tab" data-sm="backtest"   onclick="setPageMode('backtest')">Backtest</button>
+            <button class="period-tab" data-sm="incubation" onclick="setPageMode('incubation')">Incubation</button>
+            <button class="period-tab" data-sm="real"       onclick="setPageMode('real')">Real</button>
+        </div>
+        <button class="btn btn-sm btn-danger" onclick="confirmDeleteStrategy()">Delete</button>
+    </div>
+</div>
+
+<div id="drawdown-alert-banner" class="drawdown-alert-banner" style="display:none">
+    <strong id="drawdown-alert-title"></strong>
+    <span id="drawdown-alert-detail"></span>
+</div>
+
+<div class="dashboard-grid">
+
+    <!-- Backtest Run Selector (shown only in backtest mode) -->
+    <section class="card full-width" id="bt-run-selector" style="display:none">
+        <div class="section-header">
+            <h2>Backtest Runs</h2>
+            <span id="bt-runs-count" class="badge badge-neutral"></span>
+        </div>
+        <div id="bt-run-list">
+            <div class="skel skel-row"></div>
+            <div class="skel skel-row"></div>
+        </div>
+    </section>
+
+    <!-- Strategy Info -->
+    <section class="card" id="info-section">
+        <div class="section-header">
+            <h2>Strategy Info</h2>
+            <button class="btn btn-ghost btn-sm" onclick="toggleEdit()">Edit</button>
+        </div>
+        <div id="info-container" class="info-grid">
+            <div class="skel skel-line" style="width:65%"></div>
+            <div class="skel skel-line" style="width:55%"></div>
+            <div class="skel skel-line" style="width:70%"></div>
+            <div class="skel skel-line" style="width:48%"></div>
+        </div>
+        <div id="edit-form" style="display:none">
+            <div class="edit-form-wrapper">
+                <p class="edit-form-title">Edit Strategy</p>
+                <div class="edit-grid">
+                    <div class="field-group">
+                        <span class="field-label">Name</span>
+                        <input class="field-input" type="text" id="edit-name" placeholder="Strategy name">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-label">Symbol</span>
+                        <input class="field-input" type="text" id="edit-symbol" placeholder="EURUSD, XAUUSD…">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-label">Timeframe</span>
+                        <input class="field-input" type="text" id="edit-timeframe" placeholder="M15, H1, D1…">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-label">Operational Style</span>
+                        <input class="field-input" type="text" id="edit-style" placeholder="Momentum, Breakout…">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-label">Trade Duration</span>
+                        <input class="field-input" type="text" id="edit-duration" placeholder="Day Trading, Swing…">
+                    </div>
+                    <div class="field-group">
+                        <span class="field-label">Description</span>
+                        <input class="field-input" type="text" id="edit-description" placeholder="Short description…">
+                    </div>
+                </div>
+                <div class="edit-actions">
+                    <button class="btn btn-primary btn-sm" onclick="saveStrategy()">Save changes</button>
+                    <button class="btn btn-ghost btn-sm" onclick="toggleEdit()">Cancel</button>
+                    <span id="edit-status" class="edit-status"></span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Performance Metrics -->
+    <section class="card" id="metrics-section">
+        <div class="section-header">
+            <h2>Performance Metrics</h2>
+            <span id="updated-metrics" class="updated-at"></span>
+            <div style="margin-left:auto; display:flex; gap:0.5rem">
+                <a href="/advanced-analysis?strategy_ids={{ strategy_id }}" class="btn btn-ghost btn-sm">Advanced Analysis</a>
+                <a href="/strategy/{{ strategy_id }}/quantstats-report" class="btn btn-ghost btn-sm" target="_blank" id="full-report-btn">Full Report</a>
+            </div>
+        </div>
+        <div id="metrics-container" class="metrics-grid">
+            <div class="skel skel-metric"></div><div class="skel skel-metric"></div>
+            <div class="skel skel-metric"></div><div class="skel skel-metric"></div>
+            <div class="skel skel-metric"></div><div class="skel skel-metric"></div>
+            <div class="skel skel-metric"></div>
+        </div>
+    </section>
+
+    <!-- Equity Chart -->
+    <section class="card full-width" id="chart-section">
+        <div class="section-header">
+            <h2>Equity Curve</h2>
+            <span id="updated-equity" class="updated-at"></span>
+            <span id="equity-side-info" class="badge badge-neutral" style="display:none;margin-left:0.5rem">Equity shows all trades</span>
+            <div style="margin-left:auto; display:flex; gap:0.4rem">
+                <button class="btn-chart-action" onclick="exportChart('equity-chart', 'equity.png')" title="Export image">Export</button>
+            </div>
+            <div class="period-tabs" style="margin-left:0.75rem" id="equity-scale-tabs">
+                <button class="period-tab" data-es="monetary" onclick="setEquityScale('monetary')">$</button>
+                <button class="period-tab" data-es="pct"      onclick="setEquityScale('pct')">%</button>
+            </div>
+            <div class="period-tabs" style="margin-left:0.5rem">
+                <button class="period-tab active" data-ep="all" onclick="setEquityPeriod('all')">All</button>
+                <button class="period-tab" data-ep="1Y"  onclick="setEquityPeriod('1Y')">1Y</button>
+                <button class="period-tab" data-ep="6M"  onclick="setEquityPeriod('6M')">6M</button>
+                <button class="period-tab" data-ep="3M"  onclick="setEquityPeriod('3M')">3M</button>
+                <button class="period-tab" data-ep="1M"  onclick="setEquityPeriod('1M')">1M</button>
+            </div>
+        </div>
+        <div class="chart-wrapper">
+            <canvas id="equity-chart"></canvas>
+        </div>
+    </section>
+
+    <!-- Underwater (Drawdown) Chart -->
+    <section class="card full-width" id="underwater-section">
+        <div class="section-header">
+            <h2>Drawdown Underwater</h2>
+            <button class="btn-chart-action" style="margin-left:auto" onclick="exportChart('underwater-chart', 'drawdown.png')" title="Export image">Export</button>
+        </div>
+        <div class="chart-wrapper" style="height:150px">
+            <canvas id="underwater-chart"></canvas>
+        </div>
+    </section>
+
+    <!-- Monthly P&L -->
+    <section class="card full-width" id="monthly-section">
+        <div class="section-header">
+            <h2>P&amp;L Analysis</h2>
+            <div style="margin-left:auto; display:flex; gap:0.4rem">
+                <button class="btn-chart-action" onclick="exportChart('monthly-pnl-chart', 'pnl_analysis_month.png')" title="Export P&amp;L by Month">Export Month</button>
+                <button class="btn-chart-action" onclick="exportChart('annual-pnl-chart', 'pnl_analysis_year.png')" title="Export P&amp;L by Year">Export Year</button>
+            </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem">
+            <div>
+                <p class="chart-subtitle">By Month</p>
+                <div id="monthly-pnl-wrapper" class="chart-wrapper-sm"><canvas id="monthly-pnl-chart"></canvas></div>
+            </div>
+            <div>
+                <p class="chart-subtitle">By Year</p>
+                <div id="annual-pnl-wrapper" class="chart-wrapper-sm"><canvas id="annual-pnl-chart"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Trade Distribution -->
+    <section class="card full-width" id="distribution-section">
+        <div class="section-header">
+            <h2>Trade Distribution</h2>
+            <div style="margin-left:auto; display:flex; gap:0.4rem">
+                <button class="btn-chart-action" onclick="exportChart('dist-hour-chart', 'distribution_hour.png')" title="Export Distribution by Hour">Export Hour</button>
+                <button class="btn-chart-action" onclick="exportChart('dist-dow-chart', 'distribution_dow.png')" title="Export Distribution by Day">Export Day</button>
+            </div>
+        </div>
+        <div class="two-col-charts">
+            <div>
+                <p class="chart-subtitle">By Hour of Day</p>
+                <div id="dist-hour-wrapper" class="chart-wrapper" style="height:200px"><canvas id="dist-hour-chart"></canvas></div>
+            </div>
+            <div>
+                <p class="chart-subtitle">By Day of Week</p>
+                <div id="dist-dow-wrapper" class="chart-wrapper" style="height:200px"><canvas id="dist-dow-chart"></canvas></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Deals Table -->
+    <section class="card full-width" id="deals-section">
+        <div class="section-header">
+            <h2>Deals</h2>
+            <span id="deals-count" class="badge badge-neutral"></span>
+            <a id="deals-export-btn" class="btn btn-ghost btn-sm" style="margin-left:auto" href="#" onclick="event.preventDefault();exportDeals()">Export</a>
+        </div>
+
+        <div style="padding:0.5rem 0 0.5rem;display:flex;align-items:center;gap:0.75rem">
+            <input type="text" id="deals-search" class="field-input" placeholder="Search…" style="max-width:280px" oninput="filterDeals()">
+            <select id="deals-page-size" class="field-input" style="width:auto" onchange="localStorage.setItem('tm-deals-page-size',this.value);loadDeals(1)">
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+            </select>
+            <span class="text-muted" style="font-size:0.8rem">per page</span>
+        </div>
+
+        <!-- Live deals panel -->
+        <div id="deals-live-panel">
+            <div id="deals-container">
+                <div class="skel skel-row"></div><div class="skel skel-row"></div>
+                <div class="skel skel-row"></div><div class="skel skel-row"></div>
+                <div class="skel skel-row"></div>
+            </div>
+            <div id="pagination" class="pagination"></div>
+        </div>
+    </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Bootstrap: inject server-side constant for page-strategy.js
+const STRATEGY_ID = "{{ strategy_id }}";
+</script>
+<script src="/static/table-renderer.js?v={{ js_v }}"></script>
+<script src="/static/page-strategy.js?v={{ js_v }}"></script>
+{% endblock %}
