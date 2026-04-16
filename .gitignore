@@ -37,6 +37,11 @@ ingestion.log
 # Alembic
 alembic/versions/__pycache__/
 
+# AI assistant instruction files (internal dev notes)
+CLAUDE.md
+AGENTS.md
+GEMINI.md
+
 # Data / exports
 *.csv
 *.parquet
