@@ -84,7 +84,7 @@ def test_get_real_overview_uses_dashboard_overview_service(mock_db):
         "trademachine.trading_monitor_dashboard.routes.get_real_overview_payload",
         return_value={
             "mode": "real",
-            "strategies": [{"id": "strat1", "equity_curve": []}],
+            "strategies": [{"id": "strat1"}],
             "totals": {
                 "net_profit": 50.0,
                 "floating_pnl": 10.0,
@@ -101,10 +101,7 @@ def test_get_real_overview_uses_dashboard_overview_service(mock_db):
     data = response.json()
     assert data["mode"] == "real"
     assert data["totals"]["net_profit"] == 50.0
-    mock_overview.assert_called_once_with(
-        mock_db,
-        max_points_per_strategy=2000,
-    )
+    mock_overview.assert_called_once_with(mock_db)
 
 
 def test_get_real_daily_uses_dashboard_overview_service(mock_db):

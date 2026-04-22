@@ -184,17 +184,9 @@ def ensure_strategy_exists(
     account_id: str | None = None,
 ) -> None:
     """Ensure a strategy exists in the database, creating it if necessary."""
-    symbol_id = _get_symbol_id(db, symbol)
     if strategy_id in EXISTING_STRATEGIES:
-        if account_id:
-            db.query(Strategy).filter(
-                Strategy.id == strategy_id, Strategy.account_id.is_(None)
-            ).update({"account_id": account_id})
-        if symbol:
-            db.query(Strategy).filter(Strategy.id == strategy_id).update(
-                {"symbol": symbol, "symbol_id": symbol_id}
-            )
         return
+    symbol_id = _get_symbol_id(db, symbol)
     strategy = db.query(Strategy).filter(Strategy.id == strategy_id).first()
     if not strategy:
         try:

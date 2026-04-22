@@ -77,6 +77,15 @@ async function fetchJsonCached(url, ttlMs = 60000) {
     return data;
 }
 
+function invalidateCache(urlPattern) {
+    const keys = Object.keys(sessionStorage);
+    for (const key of keys) {
+        if (key.startsWith("tm_cache_") && (!urlPattern || key.includes(urlPattern))) {
+            sessionStorage.removeItem(key);
+        }
+    }
+}
+
 function timeAgo(ts) {
     const s = Math.floor((Date.now() - ts) / 1000);
     if (s < 10)   return "just now";

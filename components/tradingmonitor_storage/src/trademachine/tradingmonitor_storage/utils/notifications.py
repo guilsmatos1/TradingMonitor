@@ -83,12 +83,20 @@ class NotificationManager:
 
         payload = {"chat_id": chat_id, "text": text, "parse_mode": "HTML"}
 
-        try:
-            async with httpx.AsyncClient(timeout=10.0) as client:
-                response = await client.post(api_url, json=payload)
-                response.raise_for_status()
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Failed to send Telegram message: %s", exc)
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    response = await client.post(api_url, json=payload)
+                    response.raise_for_status()
+                return
+            except Exception as exc:  # noqa: BLE001
+                if attempt < 2:
+                    logger.warning(
+                        "Telegram message attempt %d/3 failed: %s", attempt + 1, exc
+                    )
+                    await asyncio.sleep(2**attempt)
+                else:
+                    logger.error("Telegram message failed after 3 attempts: %s", exc)
 
     async def send_document(
         self,
@@ -109,19 +117,27 @@ class NotificationManager:
 
         url = f"https://api.telegram.org/bot{token}/sendDocument"
 
-        try:
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                with open(file_path, "rb") as file_handle:
-                    files = {"document": file_handle}
-                    data = {"chat_id": chat_id}
-                    if caption:
-                        data["caption"] = caption
-                        data["parse_mode"] = "HTML"
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient(timeout=30.0) as client:
+                    with open(file_path, "rb") as file_handle:
+                        files = {"document": file_handle}
+                        data = {"chat_id": chat_id}
+                        if caption:
+                            data["caption"] = caption
+                            data["parse_mode"] = "HTML"
 
-                    response = await client.post(url, data=data, files=files)
-                    response.raise_for_status()
-        except Exception as exc:  # noqa: BLE001
-            logger.error("Failed to send Telegram document: %s", exc)
+                        response = await client.post(url, data=data, files=files)
+                        response.raise_for_status()
+                return
+            except Exception as exc:  # noqa: BLE001
+                if attempt < 2:
+                    logger.warning(
+                        "Telegram document attempt %d/3 failed: %s", attempt + 1, exc
+                    )
+                    await asyncio.sleep(2**attempt)
+                else:
+                    logger.error("Telegram document failed after 3 attempts: %s", exc)
 
     def send_message_sync(
         self,

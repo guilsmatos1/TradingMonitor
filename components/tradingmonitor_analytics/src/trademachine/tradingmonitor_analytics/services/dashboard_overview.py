@@ -3,12 +3,8 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from zoneinfo import ZoneInfo
 
-import numpy as np
 from sqlalchemy import func
 from sqlalchemy.orm import Session, joinedload
-from trademachine.tradingmonitor_analytics.services.dashboard_shared import (
-    compute_max_drawdown as _compute_max_drawdown,
-)
 from trademachine.tradingmonitor_analytics.services.dashboard_shared import (
     strategy_matches_history_type as _strategy_matches_history_type,
 )
@@ -127,71 +123,6 @@ def _get_latest_runtime_snapshots(
     return {str(row.strategy_id): row for row in rows}
 
 
-def _get_equity_by_sid(
-    db: Session,
-    strategy_ids: list[str],
-    max_points_per_strategy: int,
-) -> dict[str, list[dict[str, object]]]:
-    if not strategy_ids:
-        return {}
-
-    ranked_rows = (
-        db.query(
-            EquityCurve.strategy_id.label("strategy_id"),
-            EquityCurve.timestamp.label("timestamp"),
-            EquityCurve.balance.label("balance"),
-            EquityCurve.equity.label("equity"),
-            func.row_number()
-            .over(
-                partition_by=EquityCurve.strategy_id,
-                order_by=EquityCurve.timestamp.desc(),
-            )
-            .label("rn"),
-        )
-        .filter(EquityCurve.strategy_id.in_(strategy_ids))
-        .subquery()
-    )
-
-    rows = (
-        db.query(ranked_rows)
-        .filter(ranked_rows.c.rn <= max_points_per_strategy)
-        .order_by(ranked_rows.c.strategy_id, ranked_rows.c.timestamp)
-        .all()
-    )
-    result: dict[str, list[dict[str, object]]] = {
-        strategy_id: [] for strategy_id in strategy_ids
-    }
-    for row in rows:
-        result[str(row.strategy_id)].append(
-            {
-                "ts": to_iso(row.timestamp),
-                "balance": float(row.balance),
-                "equity": float(row.equity),
-            }
-        )
-    return result
-
-
-def _compute_var(equity_series: list[float], percentile: float = 95) -> float | None:
-    if len(equity_series) < 5:
-        return None
-
-    equity_array = np.asarray(equity_series, dtype=float)
-    previous_equity = equity_array[:-1]
-    returns = np.divide(
-        np.diff(equity_array),
-        previous_equity,
-        out=np.full(previous_equity.shape, np.nan, dtype=float),
-        where=(previous_equity != 0) & np.isfinite(previous_equity),
-    )
-    returns = returns[np.isfinite(returns)]
-    if len(returns) < 5:
-        return None
-
-    var = -np.percentile(returns, 100 - percentile)
-    return float(var)
-
-
 def _load_real_page_mode(db: Session) -> str:
     return get_setting_str(db, "real_page_mode", default="real")
 
@@ -233,8 +164,6 @@ def get_summary_payload(db: Session) -> SummaryResponse:
 
 def get_real_overview_payload(
     db: Session,
-    *,
-    max_points_per_strategy: int,
 ) -> dict[str, object]:
     real_page_mode = _load_real_page_mode(db)
     overview_strategies = _load_overview_strategies(db, real_page_mode)
@@ -257,11 +186,6 @@ def get_real_overview_payload(
     day_net_profit_map = _get_intraday_net_profits(db, strategy_ids)
     latest_equity_map = _get_latest_equity(db, strategy_ids)
     runtime_map = _get_latest_runtime_snapshots(db, strategy_ids)
-    equity_by_sid = _get_equity_by_sid(
-        db,
-        strategy_ids,
-        max_points_per_strategy=max_points_per_strategy,
-    )
 
     result = []
     total_net_profit = 0.0
@@ -291,24 +215,6 @@ def get_real_overview_payload(
             )
         )
 
-        equity_series = [
-            float(str(point["equity"])) for point in equity_by_sid.get(strategy_id, [])
-        ]
-        max_drawdown = _compute_max_drawdown(equity_series)
-        var_95 = _compute_var(equity_series, percentile=95)
-
-        ret_dd = None
-        initial_balance = (
-            float(strategy.initial_balance) if strategy.initial_balance else None
-        )
-        if (
-            max_drawdown
-            and max_drawdown > 0
-            and initial_balance
-            and initial_balance > 0
-        ):
-            ret_dd = round(net_profit / (abs(max_drawdown) * initial_balance), 3)
-
         result.append(
             {
                 "id": strategy.id,
@@ -318,19 +224,15 @@ def get_real_overview_payload(
                 "day_pnl": round(day_net_profit, 2),
                 "open_trades_count": open_trades_count,
                 "pending_orders_count": pending_orders_count,
-                "max_drawdown_pct": round(max_drawdown * 100, 2)
-                if max_drawdown is not None
-                else None,
-                "var_95_pct": round(var_95 * 100, 2) if var_95 is not None else None,
-                "ret_dd": ret_dd,
                 "floating_pnl": round(floating_pnl, 2),
                 "balance": round(balance, 2) if balance is not None else None,
                 "equity": round(equity, 2) if equity is not None else None,
-                "initial_balance": initial_balance,
+                "initial_balance": float(strategy.initial_balance)
+                if strategy.initial_balance
+                else None,
                 "last_update": to_iso(latest_equity.timestamp)
                 if latest_equity
                 else None,
-                "equity_curve": equity_by_sid.get(strategy_id, []),
             }
         )
         total_net_profit += net_profit

@@ -137,10 +137,13 @@ async function loadFloatingPnL() {
 
 // ── CRUD actions ──────────────────────────────────────────────────────────────
 
+let _savingPortfolio = false;
 async function createOrUpdatePortfolio() {
+    if (_savingPortfolio) return;
     const status = document.getElementById("create-status");
     const name = document.getElementById("new-name").value.trim();
     if (!name) { status.textContent = "❌ Name is required"; return; }
+    _savingPortfolio = true;
     status.textContent = _editingPortfolioId ? "Saving..." : "Creating...";
     const checkedIds = [...document.querySelectorAll("#new-strategy-list input:checked")].map(el => el.value);
     const ibRaw = document.getElementById("new-initial-balance").value;
@@ -167,6 +170,7 @@ async function createOrUpdatePortfolio() {
         }
         if (!res.ok) throw new Error(await res.text());
         const p = await res.json();
+        invalidateCache();
         closeCreateModal();
         loadPortfolios();
         loadSummary();
@@ -175,6 +179,8 @@ async function createOrUpdatePortfolio() {
         }
     } catch(err) {
         status.textContent = "❌ " + err.message;
+    } finally {
+        _savingPortfolio = false;
     }
 }
 
@@ -186,7 +192,7 @@ async function deleteStrategy(id, name) {
     );
     if (!confirmed) return;
     const res = await fetch(`/api/strategies/${id}`, { method: "DELETE" });
-    if (res.ok) { loadSummary(); loadStrategies(); }
+    if (res.ok) { invalidateCache(); loadSummary(); loadStrategies(); }
     else showToast("Error", "Failed to delete strategy.", "error");
 }
 
@@ -198,7 +204,7 @@ async function deletePortfolio(id, name) {
     );
     if (!confirmed) return;
     const res = await fetch(`/api/portfolios/${id}`, { method: "DELETE" });
-    if (res.ok) { loadPortfolios(); loadSummary(); }
+    if (res.ok) { invalidateCache(); loadPortfolios(); loadSummary(); }
     else showToast("Error", "Failed to delete portfolio.", "error");
 }
 
@@ -226,10 +232,13 @@ async function patchAccount(id, data) {
     });
 }
 
+let _savingSymbol = false;
 async function saveSymbol() {
+    if (_savingSymbol) return;
     const status = document.getElementById("sym-status");
     const name = document.getElementById("sym-name").value.trim();
     if (!name) { status.textContent = "❌ Name is required"; return; }
+    _savingSymbol = true;
     const lot = document.getElementById("sym-lot").value.trim();
     const payload = {
         name,
@@ -251,10 +260,13 @@ async function saveSymbol() {
                 body: JSON.stringify(payload),
             });
         }
+        invalidateCache();
         closeSymbolModal();
         await loadSymbols(true);
     } catch(e) {
         status.textContent = "❌ " + e.message;
+    } finally {
+        _savingSymbol = false;
     }
 }
 
@@ -267,6 +279,7 @@ async function deleteSymbol(id, name) {
     if (!confirmed) return;
     try {
         await fetchJson(`/api/symbols/${id}`, { method: "DELETE" });
+        invalidateCache();
         await loadSymbols(true);
     } catch(e) { showToast("Error", "Failed to delete symbol.", "error"); }
 }
@@ -387,8 +400,11 @@ async function toggleEdit() {
     if (status) status.textContent = "";
 }
 
+let _savingPortfolioEdit = false;
 async function savePortfolio() {
+    if (_savingPortfolioEdit) return;
     const status = document.getElementById("edit-status");
+    _savingPortfolioEdit = true;
     status.textContent = "Saving...";
     const checkedIds = [...document.querySelectorAll("#edit-strategy-list input:checked")].map(el => el.value);
     const payload = {
@@ -406,6 +422,7 @@ async function savePortfolio() {
         });
         if (!res.ok) throw new Error(await res.text());
         _portfolio = await res.json();
+        invalidateCache();
         status.textContent = "✅ Saved";
         setTimeout(() => {
             document.getElementById("edit-form").style.display = "none";
@@ -416,6 +433,8 @@ async function savePortfolio() {
         }, 700);
     } catch(err) {
         status.textContent = "❌ " + err.message;
+    } finally {
+        _savingPortfolioEdit = false;
     }
 }
 

@@ -15,7 +15,14 @@ from trademachine.tradingmonitor_storage.config import settings
 DATABASE_URL = settings.database_url
 logger = logging.getLogger(LOGGER_NAME)
 
-engine = create_engine(DATABASE_URL, echo=settings.debug, pool_pre_ping=True)
+engine = create_engine(
+    DATABASE_URL,
+    echo=settings.debug,
+    pool_pre_ping=True,
+    pool_size=5,
+    max_overflow=10,
+    pool_recycle=1800,
+)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 _DOCKER_DATABASE_HOST = "127.0.0.1"

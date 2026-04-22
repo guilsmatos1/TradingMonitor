@@ -43,6 +43,7 @@ class Settings(BaseSettings):
     # App Settings
     debug: bool = Field(default=False, alias="DEBUG")
     api_key: str = Field(alias="API_KEY")
+    secure_cookies: bool = Field(default=False, alias="SECURE_COOKIES")
 
     # Telegram Notifications
     enable_notifications: bool = Field(default=False, alias="ENABLE_NOTIFICATIONS")

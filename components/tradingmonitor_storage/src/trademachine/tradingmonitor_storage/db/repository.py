@@ -172,6 +172,9 @@ class AccountRepository:
             )
 
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -185,6 +188,9 @@ class AccountRepository:
             db.delete(acc)
             db.commit()
             return True
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -290,6 +296,9 @@ class StrategyRepository:
                 strategy.symbol_id = _lookup_symbol_id(db, symbol)
 
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -301,6 +310,9 @@ class StrategyRepository:
                 Strategy.id == strategy_id, Strategy.account_id.is_(None)
             ).update({"account_id": account_id})
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -343,6 +355,9 @@ class StrategyRepository:
             db.delete(strategy)
             db.commit()
             return True
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -426,6 +441,9 @@ class PortfolioRepository:
             db.commit()
             db.refresh(portfolio)
             return portfolio.id  # type: ignore[no-any-return]
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -465,6 +483,9 @@ class PortfolioRepository:
             db.commit()
             db.refresh(p)
             return _model_to_dict(p)
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -480,6 +501,9 @@ class PortfolioRepository:
                 portfolio.strategies.append(strategy)
                 db.commit()
             return True
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -504,6 +528,9 @@ class PortfolioRepository:
             db.delete(p)
             db.commit()
             return True
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -558,6 +585,9 @@ class DealRepository:
         try:
             insert_deal_if_new(db, deal_data)
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -568,6 +598,9 @@ class DealRepository:
             for deal_data in deals:
                 insert_deal_if_new(db, deal_data)
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -763,6 +796,9 @@ class EquityCurveRepository:
             )
             db.execute(stmt, equity_data)
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -846,6 +882,9 @@ class BacktestRepository:
                 .first()
             )
             return result.id if result else 0
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -857,6 +896,9 @@ class BacktestRepository:
             if bt:
                 bt.status = status
                 db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -870,6 +912,9 @@ class BacktestRepository:
             db.delete(bt)
             db.commit()
             return True
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -941,6 +986,9 @@ class BacktestDealRepository:
             )
             db.execute(stmt, {**deal_data, "backtest_id": backtest_id})
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -958,6 +1006,9 @@ class BacktestDealRepository:
                 )
                 db.execute(stmt, {**deal_data, "backtest_id": backtest_id})
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -1091,6 +1142,9 @@ class BacktestEquityRepository:
             )
             db.execute(stmt, {**equity_data, "backtest_id": backtest_id})
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -1108,6 +1162,9 @@ class BacktestEquityRepository:
                 )
                 db.execute(stmt, {**eq_data, "backtest_id": backtest_id})
             db.commit()
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -1144,6 +1201,9 @@ class SymbolRepository:
             db.commit()
             db.refresh(sym)
             return sym.id  # type: ignore[no-any-return]
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -1177,6 +1237,9 @@ class SymbolRepository:
             db.commit()
             db.refresh(sym)
             return _model_to_dict(sym)
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()
 
@@ -1201,5 +1264,8 @@ class SymbolRepository:
             db.delete(sym)
             db.commit()
             return True
+        except Exception:
+            db.rollback()
+            raise
         finally:
             db.close()

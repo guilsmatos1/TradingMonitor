@@ -23,6 +23,9 @@
     "bases/trading_monitor_dashboard/src/trademachine/trading_monitor_dashboard/static/page-index.js",
     "bases/trading_monitor_dashboard/src/trademachine/trading_monitor_dashboard/static/page-portfolio.js",
     "bases/trading_monitor_dashboard/src/trademachine/trading_monitor_dashboard/static/page-real.js",
+    "bases/trading_monitor_dashboard/src/trademachine/trading_monitor_dashboard/static/page-settings.js",
+    "bases/trading_monitor_dashboard/src/trademachine/trading_monitor_dashboard/static/page-strategy.js",
+    "bases/trading_monitor_dashboard/src/trademachine/trading_monitor_dashboard/static/page-symbol.js",
     "bases/trading_monitor_dashboard/src/trademachine/trading_monitor_dashboard/static/style.css",
     "bases/trading_monitor_dashboard/src/trademachine/trading_monitor_dashboard/static/table-renderer.js",
     "bases/trading_monitor_dashboard/src/trademachine/trading_monitor_dashboard/templates/account.html",
@@ -183,6 +186,6 @@
     "workspace.toml"
   ],
   "project": "tradingmonitor",
-  "source_commit": "2d1040093fa0cc2b7b45b490ca1118e9dfaa246c-dirty",
+  "source_commit": "87a69c8abd5fe8c4bc40582331b865c387aa70e9-dirty",
   "source_repo": "TradeMachine"
 }

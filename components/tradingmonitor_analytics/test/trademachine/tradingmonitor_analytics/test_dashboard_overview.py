@@ -1,4 +1,3 @@
-import warnings
 from datetime import UTC, datetime, timedelta
 
 import pytest
@@ -126,10 +125,7 @@ def test_get_real_overview_payload_aggregates_live_metrics(db_session):
     )
     db_session.flush()
 
-    payload = dov.get_real_overview_payload(
-        db_session,
-        max_points_per_strategy=50,
-    )
+    payload = dov.get_real_overview_payload(db_session)
 
     assert payload["mode"] == "real"
     assert len(payload["strategies"]) == 1
@@ -140,7 +136,6 @@ def test_get_real_overview_payload_aggregates_live_metrics(db_session):
     assert strategy_payload["floating_pnl"] == pytest.approx(12.5)
     assert strategy_payload["open_trades_count"] == 2
     assert strategy_payload["pending_orders_count"] == 1
-    assert strategy_payload["equity_curve"][-1]["equity"] == pytest.approx(1110.5)
     assert payload["totals"] == {
         "net_profit": 98.0,
         "floating_pnl": 12.5,
@@ -291,12 +286,3 @@ def test_get_real_recent_deals_payload_returns_strategy_names(db_session):
     assert len(payload) == 1
     assert payload[0]["ticket"] == 2
     assert payload[0]["strategy_name"] == "Alpha"
-
-
-def test_compute_var_ignores_zero_equity_without_runtime_warning():
-    with warnings.catch_warnings():
-        warnings.simplefilter("error", RuntimeWarning)
-        var_95 = dov._compute_var([0.0, 100.0, 90.0, 95.0, 105.0, 100.0, 110.0])
-
-    assert var_95 is not None
-    assert var_95 > 0

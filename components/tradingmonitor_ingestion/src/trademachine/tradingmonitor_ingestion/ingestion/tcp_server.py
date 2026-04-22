@@ -195,7 +195,9 @@ def send_kill_command(strategy_id: str) -> bool:
         try:
             command = {"command": "KILL", "magic": strategy_id}
             payload = json.dumps(command) + "\n"
+            conn.settimeout(10)
             conn.sendall(payload.encode("utf-8"))
+            conn.settimeout(RECV_TIMEOUT_SECONDS)
             logger.info("Kill command sent to strategy %s", strategy_id)
             return True
         except OSError as e:

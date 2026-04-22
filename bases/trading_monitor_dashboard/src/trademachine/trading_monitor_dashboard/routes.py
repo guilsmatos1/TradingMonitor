@@ -146,7 +146,6 @@ from trademachine.tradingmonitor_storage.public import (
 )
 
 logger = logging.getLogger(__name__)
-REAL_OVERVIEW_MAX_POINTS_PER_STRATEGY = 2_000
 
 
 # ── Authentication ────────────────────────────────────────────────────────────
@@ -229,15 +228,9 @@ def get_summary(db: Session = Depends(get_db)):
 
 @router.get("/real", response_model=RealOverviewResponse)
 def get_real_overview(
-    max_points_per_strategy: int = Query(
-        default=REAL_OVERVIEW_MAX_POINTS_PER_STRATEGY, ge=100, le=10_000
-    ),
     db: Session = Depends(get_db),
 ):
-    return get_real_overview_payload(
-        db,
-        max_points_per_strategy=max_points_per_strategy,
-    )
+    return get_real_overview_payload(db)
 
 
 @router.get("/real/daily", response_model=list[DailyProfitRow])

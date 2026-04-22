@@ -156,7 +156,11 @@ def create_app(
             )
         response = RedirectResponse(url=next, status_code=303)
         response.set_cookie(
-            "tm_session_key", value=api_key, httponly=True, secure=False, samesite="lax"
+            "tm_session_key",
+            value=api_key,
+            httponly=True,
+            secure=settings.secure_cookies,
+            samesite="lax",
         )
         return response
 

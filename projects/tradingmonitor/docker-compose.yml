@@ -44,6 +44,12 @@ services:
       - TELEGRAM_TOKEN=${TELEGRAM_TOKEN:-}
       - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
       - ENABLE_DRIFT_ALERTS=${ENABLE_DRIFT_ALERTS:-true}
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     volumes:
       - tradingmonitor_reports:/app/reports
     extra_hosts:
