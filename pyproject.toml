@@ -1,14 +1,14 @@
 [project]
-name = "tradingmonitor"
+name = "trademachine-tradingmonitor-export"
 version = "0.1.0"
-description = "Real-time trading monitor dashboard with MT5 ingestion and analytics"
+description = "Exported TradeMachine partial workspace for tradingmonitor"
 requires-python = ">=3.12"
 dependencies = [
     "sqlalchemy>=2.0.48",
     "alembic>=1.18.4",
     "psycopg2-binary>=2.9.11",
     "fastapi>=0.128.8",
-    "uvicorn[standard]>=0.40.0",
+    "uvicorn>=0.40.0",
     "jinja2>=3.1.6",
     "lxml>=6.0.2",
     "beautifulsoup4>=4.14.3",
@@ -20,28 +20,75 @@ dependencies = [
     "pydantic-settings>=2.13.1",
     "httpx>=0.28.1",
     "typer>=0.24.1",
+    "trademachine-tradingmonitor-storage",
+    "trademachine-tradingmonitor-ingestion",
+    "trademachine-tradingmonitor-analytics",
+    "trademachine-core",
+    "trademachine-mt5",
+    "trademachine-trading-monitor-dashboard",
+    "trademachine-trading-monitor-cli",
 ]
 
-[project.scripts]
-trading-monitor = "trademachine.trading_monitor_cli.main:app"
+[tool.uv.workspace]
+members = [
+    "projects/tradingmonitor",
+    "components/tradingmonitor_storage",
+    "components/tradingmonitor_ingestion",
+    "components/tradingmonitor_analytics",
+    "components/core",
+    "components/mt5",
+    "bases/trading_monitor_dashboard",
+    "bases/trading_monitor_cli",
+]
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    "import-linter>=2.11",
+    "xenon>=0.9.3",
+    "vulture>=2.15",
+    "polylith-cli>=1.44.0",
+]
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/trademachine"]
+[tool.uv.sources]
+"trademachine-tradingmonitor-storage" = { workspace = true }
+"trademachine-tradingmonitor-ingestion" = { workspace = true }
+"trademachine-tradingmonitor-analytics" = { workspace = true }
+"trademachine-core" = { workspace = true }
+"trademachine-mt5" = { workspace = true }
+"trademachine-trading-monitor-dashboard" = { workspace = true }
+"trademachine-trading-monitor-cli" = { workspace = true }
+
+[tool.polylith]
+namespace = "trademachine"
+
+[tool.polylith.test]
+enabled = true
+
+[tool.polylith.structure]
+theme = "tdd"
+
+[tool.polylith.resources]
+bases = "bases"
+components = "components"
 
 [tool.pytest.ini_options]
-testpaths = ["test"]
-markers = [
-    "integration: marks tests that require external services",
+addopts = "--import-mode=importlib"
+testpaths = [
+    "components/tradingmonitor_storage/test",
+    "components/tradingmonitor_ingestion/test",
+    "components/tradingmonitor_analytics/test",
+    "components/mt5/test",
+    "bases/trading_monitor_dashboard/test",
+    "bases/trading_monitor_cli/test",
 ]
-
-[tool.uv]
-dev-dependencies = [
-    "pytest>=8.3.0",
-    "pytest-asyncio>=0.23.0",
-    "pytest-mock>=3.12.0",
-    "ruff>=0.9.0",
+pythonpath = [
+    "components/tradingmonitor_storage/src",
+    "components/tradingmonitor_ingestion/src",
+    "components/tradingmonitor_analytics/src",
+    "components/core/src",
+    "components/mt5/src",
+    "bases/trading_monitor_dashboard/src",
+    "bases/trading_monitor_cli/src",
 ]

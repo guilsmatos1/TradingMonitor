@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "trademachine-trading-monitor-dashboard"
+version = "0.1.0"
+description = "trademachine-trading-monitor-dashboard brick"
+dependencies = [
+    "trademachine-core",
+    "trademachine-tradingmonitor-storage",
+    "trademachine-tradingmonitor-ingestion",
+    "trademachine-tradingmonitor-analytics",
+    "trademachine-mt5",
+    "trademachine-datamanager",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["trademachine*"]
